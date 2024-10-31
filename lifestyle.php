@@ -52,7 +52,7 @@ function getTotalLifestyleArticles() {
 }
 
 // Get articles and calculate pagination
-$articles = getLifestyleArticles($page, 5);
+$articles = getLifestyleArticles($page, 6);
 $trending_articles = getTrendingLifestyleArticles(4);
 $total_articles = getTotalLifestyleArticles();
 $total_pages = ceil($total_articles / 5);
