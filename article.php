@@ -1,20 +1,29 @@
 <?php
 require_once('admin/config.php');
 
-// Get current page from URL
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$category = isset($_GET['category']) ? $_GET['category'] : null;
+if (!isset($_GET['id'])) {
+    header('Location: index.php');
+    exit;
+}
 
-// Get articles
-$articles = getRecentArticles($page, 5, $category);
-$trending_articles = getTrendingArticles(5);
+$id = (int)$_GET['id'];
 
-// Calculate total pages
-$total_articles = getTotalArticles($category);
-$total_pages = ceil($total_articles / 5);
+// Get article
+$stmt = $pdo->prepare("SELECT * FROM artikel WHERE id = ?");
+$stmt->execute([$id]);
+$article = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$article) {
+    header('Location: index.php');
+    exit;
+}
+
+// Increment view count
+incrementViewCount($id);
 ?>
 
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -28,14 +37,13 @@ $total_pages = ceil($total_articles / 5);
     <!-- Template CSS -->
     <link rel="stylesheet" href="assets/css/style-starter.css">
 </head>
-
 <body>
-    <!-- header -->
-    <header class="w3l-header">
+        <!-- header -->
+        <header class="w3l-header">
         <!--/nav-->
         <nav class="navbar navbar-expand-lg navbar-light fill px-lg-0 py-0 px-3">
             <div class="container">
-                <a class="navbar-brand" href="index.php">
+                <a class="navbar-brand" href="index.html">
                     <span class="fa fa-pencil-square-o"></span> Web Programming Blog</a>
                 <!-- if logo is image enable this   
 						<a class="navbar-brand" href="#index.html">
@@ -52,7 +60,7 @@ $total_pages = ceil($total_articles / 5);
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ml-auto">
                         <li class="nav-item active">
-                            <a class="nav-link" href="index.php">Home</a>
+                            <a class="nav-link" href="index.html">Home</a>
                         </li>
                         <li class="nav-item dropdown @@category__active">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
@@ -60,20 +68,16 @@ $total_pages = ceil($total_articles / 5);
                                 Categories <span class="fa fa-angle-down"></span>
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <a class="dropdown-item @@cp__active" href="technology.php">Technology posts</a>
-                                <a class="dropdown-item @@ls__active" href="lifestyle.php">Lifestyle posts</a>
+                                <a class="dropdown-item @@cp__active" href="technology.html">Technology posts</a>
+                                <a class="dropdown-item @@ls__active" href="lifestyle.html">Lifestyle posts</a>
                             </div>
                         </li>
                         <li class="nav-item @@contact__active">
                             <a class="nav-link" href="contact.html">Contact</a>
                         </li>
                         <li class="nav-item @@about__active">
-                            <a class="nav-link" href="about.php">About</a>
+                            <a class="nav-link" href="about.html">About</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin/admin.php">Dashboard Admin</a>
-                        </li>
-    </li>
                     </ul>
 
                     <!--/search-right-->
@@ -130,106 +134,35 @@ $total_pages = ceil($total_articles / 5);
         <!--//nav-->
     </header>
     <!-- //header -->
-
-    <div class="w3l-homeblock1">
-        <div class="container pt-lg-5 pt-md-4">
-            <!-- block -->
-            <div class="row">
-            <div class="col-lg-9 most-recent">
-    <h3 class="section-title-left">Most Recent Posts</h3>
-    <div class="list-view">
-        <?php foreach($articles as $article): ?>
-        <div class="grids5-info img-block-mobile <?php echo ($article !== reset($articles)) ? 'mt-5' : ''; ?>">
-            <div class="blog-info align-self">
+    
+    <div class="container mt-5">
+        <article class="blog-post">
+            <h1 class="blog-post-title"><?php echo htmlspecialchars($article['judul']); ?></h1>
+            
+            <div class="blog-post-meta my-3">
                 <span class="category"><?php echo ucfirst($article['kategori']); ?></span>
-                <a href="article.php?id=<?php echo $article['id']; ?>" class="blog-desc mt-0">
-                    <?php echo htmlspecialchars($article['judul']); ?>
-                </a>
-                <p><?php echo substr(strip_tags($article['isi']), 0, 150) . '...'; ?></p>
-                <div class="author align-items-center mt-3 mb-1">
-                    <a href="#author"><?php echo htmlspecialchars($article['author']); ?></a>
-                </div>
-                <ul class="blog-meta">
-                    <li class="meta-item blog-lesson">
-                        <span class="meta-value"><?php echo formatDate($article['tanggal_publikasi']); ?></span>
-                    </li>
-                    <li class="meta-item blog-students">
-                        <span class="meta-value"><?php echo $article['view_count']; ?> reads</span>
-                    </li>
-                </ul>
+                <span class="mx-2">|</span>
+                <span>By <?php echo htmlspecialchars($article['author']); ?></span>
+                <span class="mx-2">|</span>
+                <span><?php echo formatDate($article['tanggal_publikasi']); ?></span>
+                <span class="mx-2">|</span>
+                <span><?php echo $article['view_count']; ?> reads</span>
             </div>
+            
             <?php if(!empty($article['gambar'])): ?>
                         <a href="article.php?id=<?php echo $article['id']; ?>" class="d-block zoom mt-md-0 mt-3">
                             <img src="admin/<?php echo htmlspecialchars($article['gambar']); ?>" alt="<?php echo htmlspecialchars($article['judul']); ?>" class="img-fluid radius-image news-image">
                         </a>
                         <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-
-    <!-- Pagination -->
-    <div class="pagination-wrapper mt-5">
-        <ul class="page-pagination">
-            <?php if($page > 1): ?>
-            <li><a class="next" href="?page=<?php echo $page-1; ?>"><span class="fa fa-angle-left"></span></a></li>
-            <?php endif; ?>
             
-            <?php for($i = 1; $i <= $total_pages; $i++): ?>
-            <li>
-                <?php if($i == $page): ?>
-                <span aria-current="page" class="page-numbers current"><?php echo $i; ?></span>
-                <?php else: ?>
-                <a class="page-numbers" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                <?php endif; ?>
-            </li>
-            <?php endfor; ?>
-            
-            <?php if($page < $total_pages): ?>
-            <li><a class="next" href="?page=<?php echo $page+1; ?>"><span class="fa fa-angle-right"></span></a></li>
-            <?php endif; ?>
-        </ul>
-    </div>
-</div>
-
-<!-- Trending Section -->
-<div class="col-lg-3 trending mt-lg-0 mt-5 mb-lg-5">
-    <div class="pos-sticky">
-        <h3 class="section-title-left">Trending</h3>
-        <?php foreach($trending_articles as $index => $article): ?>
-        <div class="grids5-info">
-            <h4><?php echo str_pad($index + 1, 2, '0', STR_PAD_LEFT); ?>.</h4>
-            <div class="blog-info">
-                <a href="article.php?id=<?php echo $article['id']; ?>" class="blog-desc1">
-                    <?php echo htmlspecialchars($article['judul']); ?>
-                </a>
-                <div class="author align-items-center mt-2 mb-1">
-                    <a href="#author"><?php echo htmlspecialchars($article['author']); ?></a>
-                </div>
-                <ul class="blog-meta">
-                    <li class="meta-item blog-lesson">
-                        <span class="meta-value"><?php echo formatDate($article['tanggal_publikasi']); ?></span>
-                    </li>
-                    <li class="meta-item blog-students">
-                        <span class="meta-value"><?php echo $article['view_count']; ?> reads</span>
-                    </li>
-                </ul>
+            <div class="blog-post-content">
+                <?php echo nl2br(htmlspecialchars($article['isi'])); ?>
             </div>
-        </div>
-        <?php endforeach; ?>
+        </article>
     </div>
-</div>
-            <!-- //block-->
-
-            <!-- ad block -->
-            <!-- <div class="ad-block text-center mt-5">
-                <a href="#url"><img src="assets/images/ad.gif" class="img-fluid" alt="ad image" /></a>
-            </div> -->
-            <!-- //ad block -->
-
-        </div>
-    </div>
-    <!-- footer -->
-    <footer class="w3l-footer-16">
+    
+   <!-- footer -->
+   <footer class="w3l-footer-16">
         <div class="footer-content py-lg-5 py-4 text-center">
             <div class="container">
                 <div class="copy-right">
@@ -293,7 +226,5 @@ $total_pages = ceil($total_articles / 5);
     <!-- disable body scroll which navbar is in active -->
 
     <script src="assets/js/bootstrap.min.js"></script>
-
 </body>
-
 </html>
